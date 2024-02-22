@@ -1,0 +1,4 @@
+Pyrebase4
+adafruit-io
+python-dotenv
+Adafruit-ADS1x15
