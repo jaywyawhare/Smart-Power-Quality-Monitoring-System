@@ -1,57 +1,31 @@
-import time
-import Adafruit_ADS1x15 as ADS
-from Adafruit_IO import Client
-import os
-import math
-import dotenv
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+from adafruit_ads1x15.adafruit_ads1x15 import Mode
 
-dotenv.load_dotenv()
+i2c = busio.I2C(board.SCL, board.SDA)
+ads = ADS.ADS1115(i2c)
+ads.mode = Mode.CONTINUOUS
+sample_rate = 860
+ads.data_rate = sample_rate
 
-adc = ADS.ADS1115()
-aio = Client(os.getenv("ADAFRUIT_IO_USERNAME"), os.getenv("ADAFRUIT_IO_KEY"))
-
-GAIN = 1
-samples = 10
-precision = 4
+channel = AnalogIn(ads, ADS.P0)
 
 
-def read_adc(channel: int) -> int:
+def get_values(param:str)->float:
     """
-    This function reads the analog input from the specified channel and returns the absolute value of the reading
+    Get the values from the sensor
 
     Args:
-    channel (int): The channel to read from
+    param (str): The parameter to get the values for.
 
     Returns:
-    int: The absolute value of the reading
+    float: The value of the parameter.
     """
-    return abs(adc.read_adc(channel, gain=GAIN))
-
-
-def calculate_current_voltage() -> tuple:
-    """
-    This function calculates the current and voltage values from the analog inputs and returns them as a tuple
-
-    Returns:
-    tuple: The current and voltage values
-    """
-    maxIValue = maxVValue = 0
-    datai = [read_adc(0) for _ in range(samples)]
-    datav = [read_adc(1) for _ in range(samples)]
-
-    for value in datai:
-        if value > maxIValue:
-            maxIValue = value
-
-    for value in datav:
-        if value > maxVValue:
-            maxVValue = value
-            print("New maxv value:", maxVValue)
-
-    IrmsA0 = round(maxIValue / 2047 * 30, precision)
-    ampsA0 = round(IrmsA0 / math.sqrt(2), precision)
-
-    VrmsA1 = round(maxVValue * 1100 / 2047, precision)
-    voltsA1 = round(VrmsA1 / math.sqrt(2), precision)
-
-    return ampsA0, voltsA1
+    if param == 'voltage':
+        return channel.voltage
+    elif param == 'raw_value':
+        return channel.value
+    else:
+        raise ValueError('Invalid parameter')
